@@ -3,8 +3,6 @@ import os
 import socketserver
 import threading
 from http.server import SimpleHTTPRequestHandler
-
-from discord.ext import tasks, commands
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -73,8 +71,10 @@ async def submit_report(interaction: discord.Interaction, team_name: str, report
     await interaction.response.defer(ephemeral=True)
 
     try:
-        if report_file.content_type not in ["application/pdf", "text/plain"]:
-            await interaction.followup.send("Invalid file type. Please upload a PDF or text file.")
+        if report_file.content_type not in ["application/pdf", "application/vnd.openxmlformats-officedocument"
+                                                               ".wordprocessingml.document", "application/msword",
+                                            "application/vnd.google-apps.document"]:
+            await interaction.followup.send("Invalid file type. Please upload a PDF file.")
             return
 
         file_content = await report_file.read()
@@ -121,7 +121,7 @@ class MyHttpRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        html = f"I am running good (Mutex Bot)"
+        html = "I am running good (Mutex Bot)"
         self.wfile.write(bytes(html, "utf8"))
 
 
