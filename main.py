@@ -1,8 +1,13 @@
 import asyncio
+import os
+import socketserver
+import threading
+from http.server import SimpleHTTPRequestHandler
+
+from discord.ext import tasks, commands
 import discord
 from discord import app_commands
 from discord.ext import commands
-import os
 from dotenv import load_dotenv
 
 from utils import gdrive
@@ -72,9 +77,7 @@ async def submit_report(interaction: discord.Interaction, team_name: str, report
             await interaction.followup.send("Invalid file type. Please upload a PDF or text file.")
             return
 
-
         file_content = await report_file.read()
-
 
         file_drive = drive.CreateFile({
             'title': f'{team_name}_{report_file.filename}',
@@ -109,4 +112,27 @@ async def submit_report(interaction: discord.Interaction, team_name: str, report
         await interaction.followup.send(f"Failed to upload report: {error}")
 
 
+class MyHttpRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPRequestHandler.end_headers(self)
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        html = f"I am running good (Mutex Bot)"
+        self.wfile.write(bytes(html, "utf8"))
+
+
+def create_server():
+    port = 8000
+    handler_object = MyHttpRequestHandler
+    my_server = socketserver.TCPServer(("", port), handler_object)
+
+    print("serving at port:" + str(port))
+    my_server.serve_forever()
+
+
+threading.Thread(target=create_server).start()
 bot.run(TOKEN)
