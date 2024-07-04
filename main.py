@@ -43,7 +43,7 @@ async def on_ready():
 async def on_member_join(member):
     _id = member.id
     try:
-        sheet = gspread_client.open("Mutex").sheet1
+        sheet = gspread_client.open("Mutex").default
         records = sheet.get_all_records()
 
         for row in records:
