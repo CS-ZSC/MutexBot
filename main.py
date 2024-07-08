@@ -42,25 +42,33 @@ async def on_ready():
 @bot.event
 async def on_member_join(member):
     _id = member.id
+    _username = member.name
     try:
-        sheet = gspread_client.open("Mutex").default
+        sheet = gspread_client.open("Mutex").worksheet("default")
         records = sheet.get_all_records()
 
         for row in records:
-            if str(row['user_id']) == str(_id):
-                role_name = row['role_name']
+            if str(row['UserID']) == str(_username) or str(row['UserID']) == str(_id):
+                role_name = row['RoleName']
                 guild = member.guild
                 role = discord.utils.get(guild.roles, name=role_name)
                 if role:
-                    new_nickname = f"{member.name} - {row['team_name']}"
+                    new_nickname = f"{row['UserName']}-{row['TeamName']}"
                     await asyncio.gather(member.add_roles(role), member.edit(nick=new_nickname),
-                                         member.send(f'Added role {role.name} to {member.name}'))
+                                         member.send(f'Welcome to Mutex server . Wishing you all the best 😀.'
+                                                     f'You have gained a role to be a {role_name}.'))
                 else:
                     print(f'Role "{role_name}" not found in guild "{guild.name}"')
                 break
         else:
-            await member.send('You are not registered. Please register at "form link" or contact us.')
-            await member.kick(reason='You are not registered. Please register at "form link" or contact us.')
+            await member.send(
+                'You are not registered. Please register at (form link)['
+                'https://docs.google.com/forms/d/e/1FAIpQLSdiRkiyYPBGjRiTwJDOuY-K8cFPCqvugurz0yNcRcJjZ5DUkg/viewform] '
+                'or contact us.')
+            await member.kick(reason='You are not registered. Please register at (form link)['
+                                     'https://docs.google.com/forms/d/e/1FAIpQLSdiRkiyYPBGjRiTwJDOuY'
+                                     '-K8cFPCqvugurz0yNcRcJjZ5DUkg/viewform]'
+                                     'or contact us.')
     except Exception as e:
         print(f'An error occurred: {e}')
 
