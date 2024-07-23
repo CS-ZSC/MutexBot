@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import os
 import socketserver
@@ -43,24 +44,33 @@ async def on_ready():
 async def on_member_join(member):
     _id = member.id
     _username = member.name
+    print(f"Member joined: ID={_id}, Username={_username}")
     try:
         sheet = gspread_client.open("Mutex").worksheet("default")
+        print("Worksheet 'default' opened successfully.")
         records = sheet.get_all_records()
 
         for row in records:
             if str(row['UserID']) == str(_username) or str(row['UserID']) == str(_id):
                 role_name = row['RoleName']
+                print(f"Match found: RoleName={role_name}")
                 guild = member.guild
                 role = discord.utils.get(guild.roles, name=role_name)
                 if role:
                     new_nickname = f"{row['UserName']}-{row['TeamName']}"
-                    await asyncio.gather(member.add_roles(role), member.edit(nick=new_nickname),
-                                         member.send(f'Welcome to Mutex server . Wishing you all the best 😀.'
-                                                     f'You have gained a role to be a {role_name}.'))
+                    print(f"New nickname: {new_nickname}")
+                    await asyncio.gather(
+                        member.add_roles(role),
+                        member.edit(nick=new_nickname),
+                        member.send(f'Welcome to Mutex server. Wishing you all the best 😀. '
+                                    f'You have gained a role to be a {role_name}.')
+                    )
+                    print(f"Role '{role_name}' added and nickname set for member '{_username}'.")
                 else:
                     print(f'Role "{role_name}" not found in guild "{guild.name}"')
                 break
         else:
+            print(f"No match found for member ID={_id} or Username={_username}.")
             await member.send(
                 'You are not registered. Please register at (form link)['
                 'https://docs.google.com/forms/d/e/1FAIpQLSdiRkiyYPBGjRiTwJDOuY-K8cFPCqvugurz0yNcRcJjZ5DUkg/viewform] '
@@ -78,19 +88,24 @@ async def on_member_join(member):
 async def submit_report(interaction: discord.Interaction, team_name: str, report_file: discord.Attachment):
     await interaction.response.defer(ephemeral=True)
 
+    print(f"Submit report command invoked: team_name={team_name}, report_file={report_file.filename}")
+
     try:
         if report_file.content_type not in ["application/pdf", "application/vnd.openxmlformats-officedocument"
                                                                ".wordprocessingml.document", "application/msword",
                                             "application/vnd.google-apps.document"]:
+            print(f"Invalid file type: {report_file.content_type}")
             await interaction.followup.send("Invalid file type. Please upload a PDF file.")
             return
 
         file_content = await report_file.read()
+        print(f"File content read successfully. File size: {len(file_content)} bytes")
 
         file_drive = drive.CreateFile({
             'title': f'{team_name}_{report_file.filename}',
             "parents": [{"id": os.getenv('FOLDER_ID')}]
         })
+        print(f"Drive file created with title: {team_name}_{report_file.filename}")
 
         if report_file.content_type == "text/plain":
             file_drive.SetContentString(file_content.decode('utf-8'))
@@ -98,25 +113,33 @@ async def submit_report(interaction: discord.Interaction, team_name: str, report
             file_path = f"./{team_name}_{report_file.filename}"
             with open(file_path, 'wb') as f:
                 f.write(file_content)
+            print(f"File written to temporary path: {file_path}")
             file_drive.SetContentFile(file_path)
             os.remove(file_path)
+            print(f"File uploaded and temporary file removed: {file_path}")
 
         file_drive.Upload()
 
         file_id = file_drive['id']
+        print(f"Uploaded file ID: {file_id}")
+
         file_drive.InsertPermission({
             'type': 'anyone',
             'value': 'anyone',
             'role': 'reader'
         })
+
         shareable_link = f"https://drive.google.com/file/d/{file_id}/view?usp=sharing"
+        print(f"Shareable link generated: {shareable_link}")
 
         # Acknowledge the submission
         await interaction.followup.send(
             f"Report for team {team_name} has been submitted successfully.\n"
             f"Google Drive link: {shareable_link}"
         )
+        print("Acknowledgement sent to user.")
     except Exception as error:
+        print(f"Failed to upload report: {error}")
         await interaction.followup.send(f"Failed to upload report: {error}")
 
 
